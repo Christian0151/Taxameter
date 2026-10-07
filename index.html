@@ -39,8 +39,7 @@
     display:flex;flex-direction:column;
     justify-content:center;align-items:center;
     padding:var(--pad);
-    min-height:0;
-    position:relative;
+    min-height:0;position:relative;
   }
   .price-label{
     font-size:var(--fs-label);letter-spacing:.16em;
@@ -117,33 +116,33 @@
   .dot.live{background:var(--green);animation:pulse 1.2s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
 
-  /* --- Buttons --- */
+  /* --- Buttons: 2 Stück, großer Hauptbutton + Reset --- */
   .controls{
     flex:0 0 auto;
     display:grid;
-    /* Hauptbutton breit + Pause daneben + Reset kompakt rechts */
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr auto;
     gap:var(--gap);
-    align-items:stretch;
   }
   button{
     font:inherit;font-weight:600;font-size:var(--fs-btn);
     border:0;border-radius:var(--radius);
     padding:clamp(14px,3.4vmin,22px) clamp(10px,2.4vmin,24px);
     color:#fff;background:var(--accent);cursor:pointer;
-    transition:filter .15s,transform .05s;
+    transition:background .2s,transform .05s,filter .15s;
     white-space:nowrap;
     display:flex;align-items:center;justify-content:center;gap:6px;
     min-height:clamp(52px,10vmin,72px);
   }
   button:active{transform:scale(.985)}
   button:disabled{opacity:.35;cursor:not-allowed}
-  button.stop{background:var(--red)}
-  button.pause{background:var(--pause);color:#000}
+  /* Hauptbutton-Zustände: Start (blau) / Pause (gelb) / Weiter (grün) */
+  button#mainBtn{background:var(--accent)}      /* Start: blau */
+  button#mainBtn.pause-state{background:var(--pause);color:#000} /* Pause: gelb */
+  button#mainBtn.resume-state{background:var(--green)} /* Weiter: grün */
   button.ghost{
     background:#21262d;color:var(--fg);
-    font-size:calc(var(--fs-btn)*.85);
-    padding:clamp(14px,3.4vmin,22px) clamp(12px,2.6vmin,20px);
+    font-size:calc(var(--fs-btn)*.9);
+    padding:clamp(14px,3.4vmin,22px) clamp(14px,3vmin,26px);
   }
 
   /* --- Einstellungen --- */
@@ -251,7 +250,7 @@
     }
     .controls{
       grid-area:controls;
-      grid-template-columns: 1fr auto auto;
+      grid-template-columns: 1fr auto;
       align-items:stretch;
     }
     button{padding:clamp(16px,2.6vmin,28px) clamp(20px,3.4vmin,44px)}
@@ -315,10 +314,9 @@
 
 <div class="status-box"><span class="dot" id="dot"></span><span id="status">Bereit</span></div>
 
-<!-- Start (breit) | Pause | Reset (klein) -->
+<!-- Zwei Buttons: links Haupt (Start/Pause/Weiter), rechts Reset -->
 <div class="controls">
-  <button id="startBtn">▶ Start</button>
-  <button id="pauseBtn" class="pause" disabled>❚❚ Pause</button>
+  <button id="mainBtn">▶ Start</button>
   <button id="resetBtn" class="ghost">↻</button>
 </div>
 
@@ -362,7 +360,7 @@
   const el = {
     price: $('price'), perKm: $('perKm'), dist: $('dist'), time: $('time'),
     speed: $('speed'), cur: $('cur'), dot: $('dot'), status: $('status'),
-    startBtn: $('startBtn'), pauseBtn: $('pauseBtn'), resetBtn: $('resetBtn'),
+    mainBtn: $('mainBtn'), resetBtn: $('resetBtn'),
     consumption: $('consumption'), fuelPrice: $('fuelPrice'), baseFare: $('baseFare'),
     vehEnabled: $('vehEnabled'), vehCost: $('vehCost'), vehFields: $('vehFields'),
     hint: $('hint'), extraInfo: $('extraInfo'),
@@ -373,7 +371,7 @@
     { minimumFractionDigits:d, maximumFractionDigits:d });
 
   const S = {
-    state: 'idle',
+    state: 'idle',          // 'idle' | 'running' | 'paused'
     watchId: null,
     totalKm: 0,
     lastPos: null,
@@ -384,6 +382,7 @@
   };
   const SETTINGS_KEY = 'gps-taxameter-settings';
 
+  /* ---------- Einstellungen ---------- */
   function loadSettings() {
     try {
       const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
@@ -411,6 +410,7 @@
     return Number.isFinite(v) && v >= 0 ? v : fallback;
   }
 
+  /* ---------- Kosten ---------- */
   function fuelCostPerKm() {
     return readNum(el.consumption,6)/100 * readNum(el.fuelPrice,1.8);
   }
@@ -426,6 +426,7 @@
     el.vehCost.disabled = !on || S.state !== 'idle';
   }
 
+  /* ---------- Geometrie ---------- */
   function haversine(lat1, lon1, lat2, lon2) {
     const R = 6371, rad = Math.PI/180;
     const dLat = (lat2-lat1)*rad, dLon = (lon2-lon1)*rad;
@@ -433,6 +434,7 @@
     return 2*R*Math.asin(Math.min(1, Math.sqrt(a)));
   }
 
+  /* ---------- Anzeige ---------- */
   function render() {
     el.price.textContent = eur.format(totalCost());
     el.dist.textContent  = num(S.totalKm) + ' km';
@@ -464,37 +466,28 @@
     el.dot.className = 'dot' + (kind ? ' '+kind : '');
   }
 
-  function updateUI() {
-    const running = S.state === 'running';
-    const paused  = S.state === 'paused';
-    const idle    = S.state === 'idle';
-
-    // Start-Button: IMMER "Start", wenn Fahrt läuft nicht mehr "Stop"
-    // Stattdessen wird der Pause-Button zur "Stop"-Funktion? -> Nein.
-    // Klare Regelung:
-    // - idle:     "▶ Start"
-    // - running:  "▶ Start" (deaktiviert, weil schon läuft)   <- Optional
-    // - paused:   "▶ Start" (deaktiviert, weil schon läuft)
-    // Aber der Nutzer will Start/Stop-Logik... siehe unten
-    if (idle) {
-      el.startBtn.textContent = '▶ Start';
-      el.startBtn.classList.remove('stop');
-      el.startBtn.disabled = false;
-    } else {
-      // Während Fahrt/Pause zeigt der Button "■ Stop"
-      el.startBtn.textContent = '■ Stop';
-      el.startBtn.classList.add('stop');
-      el.startBtn.disabled = false;
+  /* ---------- Hauptbutton-Beschriftung und Farbe ---------- */
+  function updateMainBtn() {
+    if (S.state === 'idle') {
+      el.mainBtn.textContent = '▶ Start';
+      el.mainBtn.classList.remove('pause-state','resume-state');
+    } else if (S.state === 'running') {
+      el.mainBtn.textContent = '❚❚ Pause';
+      el.mainBtn.classList.add('pause-state');
+      el.mainBtn.classList.remove('resume-state');
+    } else { // paused
+      el.mainBtn.textContent = '▶ Weiter';
+      el.mainBtn.classList.add('resume-state');
+      el.mainBtn.classList.remove('pause-state');
     }
+  }
 
-    // Pause-Button
-    el.pauseBtn.disabled = idle;
-    el.pauseBtn.textContent = paused ? '▶ Weiter' : '❚❚ Pause';
-    el.pauseBtn.style.background = paused ? 'var(--green)' : 'var(--pause)';
-    el.pauseBtn.style.color = paused ? '#fff' : '#000';
+  function updateUI() {
+    const idle = S.state === 'idle';
+    updateMainBtn();
 
-    el.price.classList.toggle('run', running);
-    document.body.classList.toggle('paused', paused);
+    el.price.classList.toggle('run', S.state === 'running');
+    document.body.classList.toggle('paused', S.state === 'paused');
 
     const lockInputs = !idle;
     [el.consumption, el.fuelPrice, el.baseFare, el.vehEnabled]
@@ -502,6 +495,7 @@
     updateVehUI();
   }
 
+  /* ---------- GPS ---------- */
   function onPosition(pos) {
     if (S.state !== 'running') return;
     const c = pos.coords, acc = c.accuracy ?? 999;
@@ -545,6 +539,7 @@
     }
   }
 
+  /* ---------- Timer ---------- */
   function startTimer() {
     S.startTime = Date.now();
     S.timerId = setInterval(() => {
@@ -556,6 +551,7 @@
     S.timerId = null;
   }
 
+  /* ---------- Wake Lock ---------- */
   async function acquireWakeLock() {
     try {
       if ('wakeLock' in navigator && !S.wakeLock) {
@@ -567,6 +563,7 @@
     if (S.wakeLock) { S.wakeLock.release().catch(()=>{}); S.wakeLock = null; }
   }
 
+  /* ---------- Steuerung ---------- */
   async function start() {
     if (S.state !== 'idle') return;
     if (!('geolocation' in navigator)) { setStatus('Kein GPS','err'); return; }
@@ -609,8 +606,8 @@
     startTimer();
   }
 
-  function stop() {
-    if (S.state === 'idle') return;
+  function reset() {
+    // Falls gerade gefahren wird: erst sauber stoppen, ohne "Stop"-Logik
     if (S.state === 'running') {
       S.elapsedMs += Date.now() - S.startTime;
     }
@@ -619,32 +616,24 @@
     releaseWakeLock();
 
     S.state = 'idle';
-    S.lastPos = null;
-    updateUI();
-    renderTimeDisplay(S.elapsedMs);
-    el.cur.textContent = '–';
-    setStatus(`Gestoppt · ${num(S.totalKm)} km · ${eur.format(totalCost())}`,'ok');
-  }
-
-  function reset() {
-    stop();
     S.totalKm = 0;
     S.elapsedMs = 0;
     S.startTime = 0;
     S.lastPos = null;
+
+    updateUI();
     render(); renderTimeDisplay(0);
     el.cur.textContent = '–';
     setStatus('Zurückgesetzt – bereit','');
   }
 
-  el.startBtn.addEventListener('click', () => {
+  /* ---------- Events ---------- */
+  el.mainBtn.addEventListener('click', () => {
     if (S.state === 'idle') start();
-    else stop();
+    else if (S.state === 'running') pause();
+    else resume();
   });
-  el.pauseBtn.addEventListener('click', () => {
-    if (S.state === 'running') pause();
-    else if (S.state === 'paused') resume();
-  });
+
   el.resetBtn.addEventListener('click', () => {
     if ((S.state !== 'idle' || S.totalKm > 0) &&
         !confirm('Fahrt zurücksetzen?')) return;
@@ -662,8 +651,9 @@
   el.vehEnabled.addEventListener('change', () => {
     updateVehUI(); saveSettings(); render();
   });
-  window.addEventListener('pagehide', () => { if (S.state !== 'idle') stop(); });
+  window.addEventListener('pagehide', () => { if (S.state !== 'idle') reset(); });
 
+  /* ---------- Init ---------- */
   loadSettings(); render(); renderTimeDisplay(0); updateUI();
   if (!window.isSecureContext) setStatus('GPS nur über HTTPS / localhost','err');
 })();
