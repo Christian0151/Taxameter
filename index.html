@@ -121,13 +121,10 @@
   .controls{
     flex:0 0 auto;
     display:grid;
-    grid-template-columns: 1fr auto;   /* links Start (breit), rechts Pause */
+    /* Hauptbutton breit + Pause daneben + Reset kompakt rechts */
+    grid-template-columns: 1fr auto auto;
     gap:var(--gap);
-  }
-  /* Reset bekommt eigene Zeile in voller Breite */
-  .controls-reset{
-    flex:0 0 auto;
-    display:grid;
+    align-items:stretch;
   }
   button{
     font:inherit;font-weight:600;font-size:var(--fs-btn);
@@ -136,7 +133,7 @@
     color:#fff;background:var(--accent);cursor:pointer;
     transition:filter .15s,transform .05s;
     white-space:nowrap;
-    display:flex;align-items:center;justify-content:center;gap:8px;
+    display:flex;align-items:center;justify-content:center;gap:6px;
     min-height:clamp(52px,10vmin,72px);
   }
   button:active{transform:scale(.985)}
@@ -145,9 +142,8 @@
   button.pause{background:var(--pause);color:#000}
   button.ghost{
     background:#21262d;color:var(--fg);
-    font-size:calc(var(--fs-btn)*.9);
-    min-height:clamp(44px,8vmin,58px);
-    padding:clamp(10px,2.4vmin,16px);
+    font-size:calc(var(--fs-btn)*.85);
+    padding:clamp(14px,3.4vmin,22px) clamp(12px,2.6vmin,20px);
   }
 
   /* --- Einstellungen --- */
@@ -235,14 +231,14 @@
   .hint{font-size:clamp(10px,2.4vmin,13px);color:var(--muted);line-height:1.5}
 
   /* ================================================================
-     TABLET / LANDSCAPE – zweispaltig
+     TABLET / LANDSCAPE
      ================================================================ */
   @media (min-width: 700px) and (min-height: 500px) and (orientation: landscape) {
     body{
       display:grid;
       grid-template-columns: 1.15fr 1fr;
-      grid-template-rows: 1fr auto auto;
-      grid-template-areas:"price stats" "status status" "controls controls";
+      grid-template-rows: 1fr auto;
+      grid-template-areas:"price stats" "status controls";
     }
     .price-card{grid-area:price;padding:calc(var(--pad)*1.5)}
     .grid{grid-area:stats;height:100%}
@@ -253,16 +249,10 @@
       padding:0 calc(var(--pad)*1.3);
       min-height:clamp(40px,5vmin,64px);
     }
-    /* Auf Tablet alles in einer Zeile */
     .controls{
       grid-area:controls;
       grid-template-columns: 1fr auto auto;
-    }
-    .controls-reset{
-      display:contents;   /* Reset-Button wird in dieselbe Zeile integriert */
-    }
-    .controls-reset button{
-      min-height:clamp(52px,10vmin,72px);
+      align-items:stretch;
     }
     button{padding:clamp(16px,2.6vmin,28px) clamp(20px,3.4vmin,44px)}
     .price{font-size:clamp(90px,13vmin,170px)}
@@ -325,15 +315,11 @@
 
 <div class="status-box"><span class="dot" id="dot"></span><span id="status">Bereit</span></div>
 
-<!-- Start (breit) + Pause nebeneinander -->
+<!-- Start (breit) | Pause | Reset (klein) -->
 <div class="controls">
   <button id="startBtn">▶ Start</button>
   <button id="pauseBtn" class="pause" disabled>❚❚ Pause</button>
-</div>
-
-<!-- Reset in voller Breite darunter -->
-<div class="controls-reset">
-  <button id="resetBtn" class="ghost">↻ Reset</button>
+  <button id="resetBtn" class="ghost">↻</button>
 </div>
 
 <details id="settings">
@@ -483,11 +469,25 @@
     const paused  = S.state === 'paused';
     const idle    = S.state === 'idle';
 
-    // Start-Button: Start / Stop
-    el.startBtn.textContent = (running || paused) ? '■ Stop' : '▶ Start';
-    el.startBtn.classList.toggle('stop', running || paused);
+    // Start-Button: IMMER "Start", wenn Fahrt läuft nicht mehr "Stop"
+    // Stattdessen wird der Pause-Button zur "Stop"-Funktion? -> Nein.
+    // Klare Regelung:
+    // - idle:     "▶ Start"
+    // - running:  "▶ Start" (deaktiviert, weil schon läuft)   <- Optional
+    // - paused:   "▶ Start" (deaktiviert, weil schon läuft)
+    // Aber der Nutzer will Start/Stop-Logik... siehe unten
+    if (idle) {
+      el.startBtn.textContent = '▶ Start';
+      el.startBtn.classList.remove('stop');
+      el.startBtn.disabled = false;
+    } else {
+      // Während Fahrt/Pause zeigt der Button "■ Stop"
+      el.startBtn.textContent = '■ Stop';
+      el.startBtn.classList.add('stop');
+      el.startBtn.disabled = false;
+    }
 
-    // Pause-Button: nur in laufendem Zustand sichtbar/aktiv
+    // Pause-Button
     el.pauseBtn.disabled = idle;
     el.pauseBtn.textContent = paused ? '▶ Weiter' : '❚❚ Pause';
     el.pauseBtn.style.background = paused ? 'var(--green)' : 'var(--pause)';
