@@ -33,7 +33,7 @@
 
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius)}
 
-  /* --- Preis --- */
+  /* --- Preis-Karte mit Zahnrad oben rechts --- */
   .price-card{
     flex:1 1 auto;
     display:flex;flex-direction:column;
@@ -71,6 +71,22 @@
     pointer-events:none;
   }
   body.paused .pause-badge{opacity:1;transform:translateX(-50%) scale(1)}
+
+  /* Zahnrad-Button oben rechts in der Preiskarte */
+  .settings-btn{
+    position:absolute;
+    top:var(--pad);right:var(--pad);
+    width:clamp(34px,7vmin,44px);height:clamp(34px,7vmin,44px);
+    border-radius:50%;
+    background:var(--card);border:1px solid var(--line);
+    color:var(--muted);font-size:clamp(16px,3.4vmin,22px);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;padding:0;min-height:0;
+    transition:color .15s,transform .05s,background .15s;
+    font-weight:400;
+  }
+  .settings-btn:hover{color:var(--fg);background:#21262d}
+  .settings-btn:active{transform:scale(.94)}
 
   /* --- Statistik --- */
   .grid{
@@ -116,7 +132,7 @@
   .dot.live{background:var(--green);animation:pulse 1.2s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
 
-  /* --- Buttons: 2 Stück, großer Hauptbutton + Reset --- */
+  /* --- Buttons --- */
   .controls{
     flex:0 0 auto;
     display:grid;
@@ -135,25 +151,24 @@
   }
   button:active{transform:scale(.985)}
   button:disabled{opacity:.35;cursor:not-allowed}
-  /* Hauptbutton-Zustände: Start (blau) / Pause (gelb) / Weiter (grün) */
-  button#mainBtn{background:var(--accent)}      /* Start: blau */
-  button#mainBtn.pause-state{background:var(--pause);color:#000} /* Pause: gelb */
-  button#mainBtn.resume-state{background:var(--green)} /* Weiter: grün */
+  button#mainBtn{background:var(--accent)}
+  button#mainBtn.pause-state{background:var(--pause);color:#000}
+  button#mainBtn.resume-state{background:var(--green)}
   button.ghost{
     background:#21262d;color:var(--fg);
     font-size:calc(var(--fs-btn)*.9);
     padding:clamp(14px,3.4vmin,22px) clamp(14px,3vmin,26px);
   }
 
-  /* --- Einstellungen --- */
-  details{
+  /* --- Einstellungs-Overlay --- */
+  .settings-overlay{
     position:fixed;inset:0;
     background:rgba(0,0,0,.6);
-    border:0;border-radius:0;padding:0;
     z-index:100;display:none;overflow:hidden;
   }
-  details[open]{display:flex;align-items:flex-end;justify-content:center}
-  details[open]::before{content:"";position:absolute;inset:0;background:transparent}
+  .settings-overlay.open{
+    display:flex;align-items:flex-end;justify-content:center;
+  }
   .settings-panel{
     position:relative;background:var(--card);
     border:1px solid var(--line);
@@ -165,18 +180,24 @@
     animation:slideUp .25s ease-out;
   }
   @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-  details summary{
-    cursor:pointer;font-size:clamp(12px,3.2vmin,15px);
-    color:var(--muted);list-style:none;user-select:none;
-    padding:var(--pad) 0;
-    display:flex;align-items:center;justify-content:space-between;
-  }
-  details summary::-webkit-details-marker{display:none}
-  details summary::before{content:"⚙  "}
-  details[open] summary::after{content:"✕";font-size:1.2em}
-  details:not([open]) summary::after{content:"›";font-size:1.2em}
 
-  .fields{display:grid;gap:var(--gap);margin-top:calc(var(--pad)*1.2)}
+  .settings-header{
+    display:flex;align-items:center;justify-content:space-between;
+    font-size:clamp(13px,3.2vmin,16px);
+    color:var(--fg);font-weight:600;
+    padding-bottom:var(--pad);
+    border-bottom:1px solid var(--line);
+    margin-bottom:calc(var(--pad)*1.2);
+  }
+  .settings-close{
+    background:transparent;border:0;color:var(--muted);
+    font-size:clamp(18px,4vmin,22px);cursor:pointer;
+    padding:0 6px;min-height:0;width:auto;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .settings-close:hover{color:var(--fg)}
+
+  .fields{display:grid;gap:var(--gap)}
   label{display:grid;gap:4px;font-size:clamp(11px,2.8vmin,14px);color:var(--muted)}
   input[type=number]{
     font:inherit;font-size:clamp(15px,4vmin,19px);
@@ -256,33 +277,19 @@
     button{padding:clamp(16px,2.6vmin,28px) clamp(20px,3.4vmin,44px)}
     .price{font-size:clamp(90px,13vmin,170px)}
 
-    details{
-      background:transparent;display:block;
-      position:fixed;inset:auto;
-      top:var(--pad);right:var(--pad);
-      width:auto;padding:0;pointer-events:none;
+    /* Einstellungen als Panel rechts oben */
+    .settings-overlay.open{
+      align-items:flex-start;justify-content:flex-end;
+      padding:var(--pad);
+      background:rgba(0,0,0,.4);
     }
-    details[open]{display:block;align-items:initial;justify-content:initial}
-    details[open]::before{display:none}
     .settings-panel{
-      pointer-events:auto;
       border-radius:var(--radius);
-      min-width:300px;max-width:380px;
+      min-width:320px;max-width:400px;
       max-height:calc(100dvh - 2*var(--pad));
-      padding:calc(var(--pad)*1.4);
-      padding-bottom:calc(var(--pad)*1.4 + env(safe-area-inset-bottom));
-      border:1px solid var(--line);
-      animation:none;
+      animation:fadeIn .2s ease-out;
     }
-    details:not([open]) .settings-panel{display:none}
-    details summary{
-      pointer-events:auto;
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius:var(--radius);
-      padding:calc(var(--pad)*1.2);
-      color:var(--fg);
-    }
+    @keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
   }
   @media (min-width: 1100px) and (min-height: 700px) and (orientation: landscape) {
     body{grid-template-columns: 1.25fr 1fr}
@@ -297,6 +304,7 @@
 <body>
 
 <div class="card price-card">
+  <button class="settings-btn" id="openSettings" title="Einstellungen" aria-label="Einstellungen">⚙</button>
   <div class="pause-badge">Pause</div>
   <div class="price-label">Fahrpreis</div>
   <div class="price" id="price">0,00 €</div>
@@ -314,15 +322,18 @@
 
 <div class="status-box"><span class="dot" id="dot"></span><span id="status">Bereit</span></div>
 
-<!-- Zwei Buttons: links Haupt (Start/Pause/Weiter), rechts Reset -->
 <div class="controls">
   <button id="mainBtn">▶ Start</button>
   <button id="resetBtn" class="ghost">↻</button>
 </div>
 
-<details id="settings">
-  <div class="settings-panel">
-    <summary>Einstellungen</summary>
+<!-- Einstellungs-Overlay -->
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-panel" id="settingsPanel">
+    <div class="settings-header">
+      <span>Einstellungen</span>
+      <button class="settings-close" id="closeSettings" aria-label="Schließen">✕</button>
+    </div>
     <div class="fields">
       <label>Verbrauch (L / 100 km)
         <input type="number" id="consumption" value="6" step="0.1" min="0" inputmode="decimal">
@@ -351,7 +362,7 @@
       <div class="hint" id="hint"></div>
     </div>
   </div>
-</details>
+</div>
 
 <script>
 (() => {
@@ -364,14 +375,15 @@
     consumption: $('consumption'), fuelPrice: $('fuelPrice'), baseFare: $('baseFare'),
     vehEnabled: $('vehEnabled'), vehCost: $('vehCost'), vehFields: $('vehFields'),
     hint: $('hint'), extraInfo: $('extraInfo'),
-    settings: $('settings')
+    openSettings: $('openSettings'), closeSettings: $('closeSettings'),
+    settingsOverlay: $('settingsOverlay'), settingsPanel: $('settingsPanel')
   };
   const eur = new Intl.NumberFormat('de-DE', { style:'currency', currency:'EUR' });
   const num = (v, d=2) => v.toLocaleString('de-DE',
     { minimumFractionDigits:d, maximumFractionDigits:d });
 
   const S = {
-    state: 'idle',          // 'idle' | 'running' | 'paused'
+    state: 'idle',
     watchId: null,
     totalKm: 0,
     lastPos: null,
@@ -382,7 +394,6 @@
   };
   const SETTINGS_KEY = 'gps-taxameter-settings';
 
-  /* ---------- Einstellungen ---------- */
   function loadSettings() {
     try {
       const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
@@ -410,7 +421,6 @@
     return Number.isFinite(v) && v >= 0 ? v : fallback;
   }
 
-  /* ---------- Kosten ---------- */
   function fuelCostPerKm() {
     return readNum(el.consumption,6)/100 * readNum(el.fuelPrice,1.8);
   }
@@ -426,7 +436,6 @@
     el.vehCost.disabled = !on || S.state !== 'idle';
   }
 
-  /* ---------- Geometrie ---------- */
   function haversine(lat1, lon1, lat2, lon2) {
     const R = 6371, rad = Math.PI/180;
     const dLat = (lat2-lat1)*rad, dLon = (lon2-lon1)*rad;
@@ -434,7 +443,6 @@
     return 2*R*Math.asin(Math.min(1, Math.sqrt(a)));
   }
 
-  /* ---------- Anzeige ---------- */
   function render() {
     el.price.textContent = eur.format(totalCost());
     el.dist.textContent  = num(S.totalKm) + ' km';
@@ -466,7 +474,6 @@
     el.dot.className = 'dot' + (kind ? ' '+kind : '');
   }
 
-  /* ---------- Hauptbutton-Beschriftung und Farbe ---------- */
   function updateMainBtn() {
     if (S.state === 'idle') {
       el.mainBtn.textContent = '▶ Start';
@@ -475,7 +482,7 @@
       el.mainBtn.textContent = '❚❚ Pause';
       el.mainBtn.classList.add('pause-state');
       el.mainBtn.classList.remove('resume-state');
-    } else { // paused
+    } else {
       el.mainBtn.textContent = '▶ Weiter';
       el.mainBtn.classList.add('resume-state');
       el.mainBtn.classList.remove('pause-state');
@@ -485,7 +492,6 @@
   function updateUI() {
     const idle = S.state === 'idle';
     updateMainBtn();
-
     el.price.classList.toggle('run', S.state === 'running');
     document.body.classList.toggle('paused', S.state === 'paused');
 
@@ -495,7 +501,6 @@
     updateVehUI();
   }
 
-  /* ---------- GPS ---------- */
   function onPosition(pos) {
     if (S.state !== 'running') return;
     const c = pos.coords, acc = c.accuracy ?? 999;
@@ -539,7 +544,6 @@
     }
   }
 
-  /* ---------- Timer ---------- */
   function startTimer() {
     S.startTime = Date.now();
     S.timerId = setInterval(() => {
@@ -551,7 +555,6 @@
     S.timerId = null;
   }
 
-  /* ---------- Wake Lock ---------- */
   async function acquireWakeLock() {
     try {
       if ('wakeLock' in navigator && !S.wakeLock) {
@@ -563,7 +566,6 @@
     if (S.wakeLock) { S.wakeLock.release().catch(()=>{}); S.wakeLock = null; }
   }
 
-  /* ---------- Steuerung ---------- */
   async function start() {
     if (S.state !== 'idle') return;
     if (!('geolocation' in navigator)) { setStatus('Kein GPS','err'); return; }
@@ -607,7 +609,6 @@
   }
 
   function reset() {
-    // Falls gerade gefahren wird: erst sauber stoppen, ohne "Stop"-Logik
     if (S.state === 'running') {
       S.elapsedMs += Date.now() - S.startTime;
     }
@@ -627,7 +628,21 @@
     setStatus('Zurückgesetzt – bereit','');
   }
 
-  /* ---------- Events ---------- */
+  /* ---------- Einstellungen öffnen/schließen ---------- */
+  function openSettings() {
+    el.settingsOverlay.classList.add('open');
+  }
+  function closeSettings() {
+    el.settingsOverlay.classList.remove('open');
+  }
+
+  el.openSettings.addEventListener('click', openSettings);
+  el.closeSettings.addEventListener('click', closeSettings);
+  el.settingsOverlay.addEventListener('click', (e) => {
+    if (e.target === el.settingsOverlay) closeSettings();
+  });
+
+  /* ---------- Hauptsteuerung ---------- */
   el.mainBtn.addEventListener('click', () => {
     if (S.state === 'idle') start();
     else if (S.state === 'running') pause();
@@ -640,10 +655,6 @@
     reset();
   });
 
-  el.settings.addEventListener('click', (e) => {
-    if (e.target === el.settings) el.settings.open = false;
-  });
-
   [el.consumption, el.fuelPrice, el.baseFare, el.vehCost].forEach(i => {
     i.addEventListener('input', () => { saveSettings(); render(); });
     i.addEventListener('change', () => { saveSettings(); render(); });
@@ -653,7 +664,6 @@
   });
   window.addEventListener('pagehide', () => { if (S.state !== 'idle') reset(); });
 
-  /* ---------- Init ---------- */
   loadSettings(); render(); renderTimeDisplay(0); updateUI();
   if (!window.isSecureContext) setStatus('GPS nur über HTTPS / localhost','err');
 })();
